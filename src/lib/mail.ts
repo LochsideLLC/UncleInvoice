@@ -1,0 +1,59 @@
+import { db } from "@/lib/db";
+
+type SendEmailInput = {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  link?: string;
+};
+
+export async function sendEmail(input: SendEmailInput) {
+  const record = await db.outboxEmail.create({
+    data: {
+      to: input.to,
+      subject: input.subject,
+      bodyText: input.text,
+      bodyHtml: input.html,
+      link: input.link,
+    },
+  });
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.MAIL_FROM ?? "Uncle Invoice <noreply@uncleinvoice.com>",
+        to: [input.to],
+        subject: input.subject,
+        text: input.text,
+        html: input.html ?? `<pre>${escapeHtml(input.text)}</pre>`,
+      }),
+    });
+    if (!res.ok) {
+      const detail = await res.text();
+      throw new Error(`Email send failed: ${detail}`);
+    }
+  }
+
+  return record;
+}
+
+export async function recentOutbox(limit = 20) {
+  return db.outboxEmail.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}

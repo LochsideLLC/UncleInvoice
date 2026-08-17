@@ -1,0 +1,61 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getSessionUser } from "@/lib/auth";
+import { hashToken } from "@/lib/crypto";
+import { buildInvoicePdf } from "@/lib/pdf";
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ invoiceId: string }> },
+) {
+  const { invoiceId } = await context.params;
+  const invoice = await db.invoice.findUnique({
+    where: { id: invoiceId },
+    include: {
+      contractor: true,
+      workspace: true,
+      lineItems: { orderBy: { sortOrder: "asc" } },
+    },
+  });
+  if (!invoice) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token");
+  const allowed = await canDownload(invoice.id, invoice.workspaceId, token);
+  if (!allowed) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const pdf = await buildInvoicePdf(invoice);
+  return new NextResponse(new Uint8Array(pdf), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${invoice.number}.pdf"`,
+    },
+  });
+}
+
+async function canDownload(invoiceId: string, workspaceId: string, token: string | null) {
+  if (token) {
+    const record = await db.magicLink.findUnique({
+      where: { tokenHash: hashToken(token) },
+    });
+    if (
+      record &&
+      record.invoiceId === invoiceId &&
+      record.expiresAt >= new Date() &&
+      (record.purpose === "invoice_view" || record.purpose === "invoice_review")
+    ) {
+      return true;
+    }
+  }
+
+  const user = await getSessionUser();
+  if (!user) return false;
+  const membership = await db.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: user.id } },
+  });
+  return Boolean(membership);
+}

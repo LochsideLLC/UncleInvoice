@@ -1,0 +1,153 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships       WorkspaceMember[]
+  sessions          Session[]
+  seededInvoices    Invoice[]         @relation("SeededBy")
+  createdWorkspaces Workspace[]       @relation("CreatedBy")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Workspace {
+  id                String   @id @default(cuid())
+  name              String
+  email             String
+  phone             String?
+  addressLine       String?
+  city              String?
+  region            String?
+  postalCode        String?
+  invoicePrefix     String   @default("INV")
+  nextInvoiceNumber Int      @default(1)
+  createdById       String
+  createdBy         User     @relation("CreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  members     WorkspaceMember[]
+  contractors Contractor[]
+  invoices    Invoice[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String
+  createdAt   DateTime  @default(now())
+
+  @@unique([workspaceId, userId])
+}
+
+model Contractor {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  email       String?
+  phone       String?
+  userId      String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  invoices Invoice[]
+}
+
+model Invoice {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contractorId     String
+  contractor       Contractor @relation(fields: [contractorId], references: [id], onDelete: Restrict)
+  number           String
+  status           String
+  issueDate        DateTime
+  serviceStart     DateTime?
+  serviceEnd       DateTime?
+  notes            String?
+  internalNote     String?
+  seededByUserId   String?
+  seededBy         User?     @relation("SeededBy", fields: [seededByUserId], references: [id])
+  confirmedAt      DateTime?
+  confirmedByEmail String?
+  sentAt           DateTime?
+  sentToEmail      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  lineItems InvoiceLineItem[]
+  events    InvoiceEvent[]
+  tokens    MagicLink[]
+
+  @@unique([workspaceId, number])
+}
+
+model InvoiceLineItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unitPrice   Int
+  sortOrder   Int     @default(0)
+}
+
+model InvoiceEvent {
+  id         String   @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  type       String
+  actorEmail String?
+  actorName  String?
+  message    String
+  createdAt  DateTime @default(now())
+}
+
+model MagicLink {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  purpose   String
+  email     String
+  userId    String?
+  invoiceId String?
+  invoice   Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model OutboxEmail {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  bodyText  String
+  bodyHtml  String?
+  link      String?
+  createdAt DateTime @default(now())
+}
