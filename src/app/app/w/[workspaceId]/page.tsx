@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireWorkspace } from "@/lib/workspace";
-import { formatMoney, invoiceTotal } from "@/lib/money";
+import { formatMoney, invoiceGrandTotal } from "@/lib/money";
 import { StatusBadge } from "@/components/status-badge";
 
 export default async function WorkspaceHomePage({
@@ -25,7 +25,7 @@ export default async function WorkspaceHomePage({
 
   const openCents = invoices
     .filter((invoice) => invoice.status === "awaiting_review" || invoice.status === "draft")
-    .reduce((sum, invoice) => sum + invoiceTotal(invoice.lineItems), 0);
+    .reduce((sum, invoice) => sum + invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps), 0);
 
   return (
     <div className="space-y-8">
@@ -71,7 +71,7 @@ export default async function WorkspaceHomePage({
                       {invoice.number} · {invoice.contractor.name}
                     </p>
                     <p className="text-sm text-muted">
-                      {formatMoney(invoiceTotal(invoice.lineItems))}
+                      {formatMoney(invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps))}
                     </p>
                   </div>
                   <StatusBadge status={invoice.status} />

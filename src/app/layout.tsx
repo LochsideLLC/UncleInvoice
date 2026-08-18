@@ -1,22 +1,28 @@
 import type { Metadata } from "next";
-import { Source_Serif_4 } from "next/font/google";
+import { Fraunces, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
+const fraunces = Fraunces({
+  variable: "--font-display",
+  subsets: ["latin"],
+  axes: ["SOFT", "WONK", "opsz"],
+});
+
+const sourceSans = Source_Sans_3({
+  variable: "--font-ui",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "Uncle Invoice — That invoice, already filled in",
   description:
-    "Seed invoices from the books, send a link, and let contractors confirm. Built for bookkeepers and the businesses they keep.",
+    "Uncle already did the paperwork. Seed invoices from the books, text the contractor a link, and get a confirmed invoice back.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${sourceSerif.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
+    <html lang="en" className={`${fraunces.variable} ${sourceSans.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col bg-background text-foreground">{children}</body>
     </html>
   );
 }

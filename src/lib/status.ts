@@ -15,10 +15,10 @@ export const STATUS_LABEL: Record<InvoiceStatus, string> = {
 };
 
 export const STATUS_TONE: Record<InvoiceStatus, string> = {
-  draft: "bg-stone-100 text-stone-700",
-  awaiting_review: "bg-amber-100 text-amber-900",
-  confirmed: "bg-emerald-100 text-emerald-900",
-  sent: "bg-sky-100 text-sky-900",
+  draft: "bg-[#efe4d2] text-[#5c4a38]",
+  awaiting_review: "bg-[#f3dcc0] text-[#7a3a22]",
+  confirmed: "bg-[#dce3d0] text-[#3d4a30]",
+  sent: "bg-[#ead9b8] text-[#5a4630]",
 };
 
 export function isInvoiceStatus(value: string): value is InvoiceStatus {

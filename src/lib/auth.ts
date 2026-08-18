@@ -68,4 +68,10 @@ export async function requireUser() {
   return user;
 }
 
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (!user.admin) redirect("/app");
+  return user;
+}
+
 export { SESSION_COOKIE };

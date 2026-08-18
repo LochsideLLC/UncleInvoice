@@ -4,8 +4,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["uncleinvoice"]
 }
 
 model User {
@@ -13,6 +15,7 @@ model User {
   email        String   @unique
   name         String
   passwordHash String?
+  admin        Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -20,6 +23,8 @@ model User {
   sessions          Session[]
   seededInvoices    Invoice[]         @relation("SeededBy")
   createdWorkspaces Workspace[]       @relation("CreatedBy")
+
+  @@schema("uncleinvoice")
 }
 
 model Session {
@@ -29,6 +34,8 @@ model Session {
   tokenHash String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@schema("uncleinvoice")
 }
 
 model Workspace {
@@ -40,6 +47,7 @@ model Workspace {
   city              String?
   region            String?
   postalCode        String?
+  taxId             String?
   invoicePrefix     String   @default("INV")
   nextInvoiceNumber Int      @default(1)
   createdById       String
@@ -50,6 +58,8 @@ model Workspace {
   members     WorkspaceMember[]
   contractors Contractor[]
   invoices    Invoice[]
+
+  @@schema("uncleinvoice")
 }
 
 model WorkspaceMember {
@@ -62,21 +72,29 @@ model WorkspaceMember {
   createdAt   DateTime  @default(now())
 
   @@unique([workspaceId, userId])
+  @@schema("uncleinvoice")
 }
 
 model Contractor {
-  id          String    @id @default(cuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name        String
-  email       String?
-  phone       String?
-  userId      String?
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  email        String?
+  phone        String?
+  addressLine  String?
+  city         String?
+  region       String?
+  postalCode   String?
+  taxId        String?
+  userId       String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   invoices Invoice[]
+
+  @@schema("uncleinvoice")
 }
 
 model Invoice {
@@ -88,6 +106,20 @@ model Invoice {
   number           String
   status           String
   issueDate        DateTime
+  dueDate          DateTime?
+  poNumber         String?
+  paymentTerms     String?
+  paymentInstructions String?
+  taxRateBps       Int       @default(0)
+  amountPaid       Int       @default(0)
+  fromTaxId        String?
+  billToTaxId      String?
+  fromContactName  String?
+  billToContactName String?
+  fromAddressLine  String?
+  fromCity         String?
+  fromRegion       String?
+  fromPostalCode   String?
   serviceStart     DateTime?
   serviceEnd       DateTime?
   notes            String?
@@ -106,6 +138,7 @@ model Invoice {
   tokens    MagicLink[]
 
   @@unique([workspaceId, number])
+  @@schema("uncleinvoice")
 }
 
 model InvoiceLineItem {
@@ -115,7 +148,10 @@ model InvoiceLineItem {
   description String
   quantity    Float
   unitPrice   Int
+  taxable     Boolean @default(false)
   sortOrder   Int     @default(0)
+
+  @@schema("uncleinvoice")
 }
 
 model InvoiceEvent {
@@ -127,6 +163,8 @@ model InvoiceEvent {
   actorName  String?
   message    String
   createdAt  DateTime @default(now())
+
+  @@schema("uncleinvoice")
 }
 
 model MagicLink {
@@ -140,6 +178,8 @@ model MagicLink {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+
+  @@schema("uncleinvoice")
 }
 
 model OutboxEmail {
@@ -150,4 +190,25 @@ model OutboxEmail {
   bodyHtml  String?
   link      String?
   createdAt DateTime @default(now())
+
+  @@schema("uncleinvoice")
+}
+
+model Sponsor {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  tagline   String?
+  about     String?
+  url       String
+  email     String?
+  phone     String?
+  city      String?
+  logoUrl   String?
+  featured  Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@schema("uncleinvoice")
 }

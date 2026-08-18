@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { hashToken } from "@/lib/crypto";
 import { getSessionUser } from "@/lib/auth";
-import { formatDate } from "@/lib/dates";
-import { formatMoney, invoiceTotal, lineTotal } from "@/lib/money";
-import { StatusBadge } from "@/components/status-badge";
+import { SiteHeader } from "@/components/site-header";
+import { InvoiceDocument, invoiceToDocument } from "@/components/invoice-document";
+import { InvoiceActions } from "@/components/invoice-actions";
 
 export default async function PublicInvoicePage({
   params,
@@ -28,54 +29,26 @@ export default async function PublicInvoicePage({
   const allowed = await canViewInvoice(invoice.id, invoice.workspaceId, token);
   if (!allowed) notFound();
 
-  const total = invoiceTotal(invoice.lineItems);
+  const pdfHref = `/api/invoices/${invoice.id}/pdf${token ? `?token=${token}` : ""}`;
+  const user = await getSessionUser();
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-2xl px-5 py-12">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm uppercase tracking-widest text-muted">Invoice {invoice.number}</p>
-          <h1 className="mt-1 text-3xl">{invoice.contractor.name}</h1>
-          <p className="mt-1 text-muted">Bill to {invoice.workspace.name}</p>
-        </div>
-        <StatusBadge status={invoice.status} />
+    <div className="mx-auto min-h-full w-full max-w-6xl px-5 py-8">
+      <div className="print:hidden">
+        <SiteHeader
+          user={user}
+          extra={
+            <Link href="/create" className="hover:text-ink">
+              New invoice
+            </Link>
+          }
+        />
       </div>
-      <p className="mt-4 text-muted">Date {formatDate(invoice.issueDate)}</p>
-
-      <div className="paper mt-8 rounded-3xl p-6">
-        <ul className="space-y-3">
-          {invoice.lineItems.map((item) => (
-            <li key={item.id} className="flex justify-between gap-4">
-              <span>
-                {item.description}
-                <span className="block text-sm text-muted">
-                  {item.quantity} × {formatMoney(item.unitPrice)}
-                </span>
-              </span>
-              <span>{formatMoney(lineTotal(item.quantity, item.unitPrice))}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-6 flex justify-between border-t border-line pt-4 text-xl">
-          <span>Total</span>
-          <span>{formatMoney(total)}</span>
-        </div>
+      <p className="mb-4 text-muted print:hidden">Here&apos;s what you made. Look it over before you download.</p>
+      <InvoiceDocument invoice={invoiceToDocument(invoice)} />
+      <div className="mt-6">
+        <InvoiceActions pdfHref={pdfHref} />
       </div>
-
-      {invoice.notes ? <p className="mt-6 text-muted">{invoice.notes}</p> : null}
-      {invoice.confirmedAt ? (
-        <p className="mt-4 text-sm text-accent">
-          Confirmed by {invoice.confirmedByEmail ?? invoice.contractor.name} on{" "}
-          {formatDate(invoice.confirmedAt)}.
-        </p>
-      ) : null}
-
-      <a
-        href={`/api/invoices/${invoice.id}/pdf${token ? `?token=${token}` : ""}`}
-        className="btn btn-primary mt-8"
-      >
-        Download PDF
-      </a>
     </div>
   );
 }

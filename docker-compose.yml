@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: uncle
+      POSTGRES_PASSWORD: uncle
+      POSTGRES_DB: uncleinvoice
+    ports:
+      - "5433:5432"
+    volumes:
+      - uncleinvoice_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uncle -d uncleinvoice"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://uncle:uncle@db:5432/uncleinvoice
+      APP_URL: http://localhost:3000
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - web_node_modules:/app/node_modules
+    command: sh -c "npx prisma migrate deploy && npm run dev -- --hostname 0.0.0.0"
+
+volumes:
+  uncleinvoice_pg:
+  web_node_modules:

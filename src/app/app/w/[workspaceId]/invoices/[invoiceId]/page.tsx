@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireWorkspace } from "@/lib/workspace";
 import { formatDate, toDateInput } from "@/lib/dates";
-import { formatMoney, invoiceTotal } from "@/lib/money";
+import { formatMoney, invoiceGrandTotal } from "@/lib/money";
 import { SEEDED_DISCLAIMER } from "@/lib/invoices";
 import { sendForReviewAction, sendToClientAction } from "@/actions/invoices";
 import { StatusBadge } from "@/components/status-badge";
@@ -29,7 +29,7 @@ export default async function InvoiceDetailPage({
   });
   if (!invoice) notFound();
 
-  const total = invoiceTotal(invoice.lineItems);
+  const total = invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps);
   const canEdit = invoice.status !== "sent";
 
   return (
@@ -44,7 +44,7 @@ export default async function InvoiceDetailPage({
           <StatusBadge status={invoice.status} />
         </div>
 
-        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="notice">
           {SEEDED_DISCLAIMER}
           {invoice.seededBy ? ` Seeded by ${invoice.seededBy.name}.` : null}
         </div>
@@ -55,6 +55,11 @@ export default async function InvoiceDetailPage({
             invoice={{
               id: invoice.id,
               issueDate: toDateInput(invoice.issueDate),
+              dueDate: toDateInput(invoice.dueDate),
+              poNumber: invoice.poNumber ?? "",
+              paymentTerms: invoice.paymentTerms ?? "",
+              paymentInstructions: invoice.paymentInstructions ?? "",
+              taxRateBps: invoice.taxRateBps,
               serviceStart: toDateInput(invoice.serviceStart),
               serviceEnd: toDateInput(invoice.serviceEnd),
               notes: invoice.notes ?? "",

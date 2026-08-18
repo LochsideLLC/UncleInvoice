@@ -14,6 +14,8 @@ import {
   sendInvoiceToClient,
 } from "@/lib/invoices";
 import { hashToken } from "@/lib/crypto";
+import { invoiceBusinessData, parseBusinessInvoiceFields } from "@/lib/invoice-fields";
+import { invoiceGrandTotal, parseAmountPaid } from "@/lib/money";
 import type { ActionState } from "@/actions/auth";
 import type { InvoiceStatus } from "@/lib/status";
 
@@ -30,6 +32,8 @@ export async function createInvoiceAction(
   if (!contractorId) return { error: "Pick a contractor." };
   if (!issueDate) return { error: "Invoice date is required." };
   if (!items.length) return { error: "Add at least one line item." };
+  const business = parseBusinessInvoiceFields(formData, issueDate);
+  if ("error" in business) return { error: business.error };
 
   const contractor = await db.contractor.findFirst({
     where: { id: contractorId, workspaceId },
@@ -37,6 +41,7 @@ export async function createInvoiceAction(
   if (!contractor) return { error: "That contractor is not on this client." };
 
   const number = await nextInvoiceNumber(workspaceId);
+  const amountPaid = parseAmountPaid(formData, invoiceGrandTotal(items, business.taxRateBps));
   const invoice = await db.invoice.create({
     data: {
       workspaceId,
@@ -44,6 +49,8 @@ export async function createInvoiceAction(
       number,
       status: "draft" satisfies InvoiceStatus,
       issueDate,
+      ...invoiceBusinessData(business),
+      amountPaid,
       serviceStart: parseDate(formData.get("serviceStart")),
       serviceEnd: parseDate(formData.get("serviceEnd")),
       notes: String(formData.get("notes") ?? "").trim() || null,
@@ -97,6 +104,8 @@ export async function updateInvoiceAction(
   const items = parseLineItems(formData);
   if (!issueDate) return { error: "Invoice date is required." };
   if (!items.length) return { error: "Add at least one line item." };
+  const business = parseBusinessInvoiceFields(formData, issueDate);
+  if ("error" in business) return { error: business.error };
 
   await db.$transaction([
     db.invoiceLineItem.deleteMany({ where: { invoiceId } }),
@@ -104,6 +113,8 @@ export async function updateInvoiceAction(
       where: { id: invoiceId },
       data: {
         issueDate,
+        ...invoiceBusinessData(business),
+        amountPaid: parseAmountPaid(formData, invoiceGrandTotal(items, business.taxRateBps)),
         serviceStart: parseDate(formData.get("serviceStart")),
         serviceEnd: parseDate(formData.get("serviceEnd")),
         notes: String(formData.get("notes") ?? "").trim() || null,

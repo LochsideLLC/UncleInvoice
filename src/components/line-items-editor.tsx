@@ -7,31 +7,40 @@ export type LineDraft = {
   description: string;
   quantity: string;
   price: string;
+  taxable: boolean;
 };
 
 export function LineItemsEditor({
-  initial = [{ description: "", quantity: "1", price: "" }],
+  initial = [{ description: "", quantity: "1", price: "", taxable: false }],
+  onChange,
 }: {
   initial?: LineDraft[];
+  onChange?: (rows: LineDraft[]) => void;
 }) {
   const [rows, setRows] = useState<LineDraft[]>(
-    initial.length ? initial : [{ description: "", quantity: "1", price: "" }],
+    initial.length ? initial : [{ description: "", quantity: "1", price: "", taxable: false }],
   );
 
+  function commit(next: LineDraft[]) {
+    setRows(next);
+    onChange?.(next);
+  }
+
   function update(index: number, patch: Partial<LineDraft>) {
-    setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    commit(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
   return (
     <div className="space-y-3">
-      <div className="hidden gap-3 text-xs uppercase tracking-wide text-muted sm:grid sm:grid-cols-[1fr_5.5rem_7rem_2rem]">
+      <div className="hidden gap-3 text-xs uppercase tracking-wide text-muted sm:grid sm:grid-cols-[1fr_5.5rem_7rem_3.5rem_2rem]">
         <span>Description</span>
         <span>Qty</span>
         <span>Rate ($)</span>
+        <span>Tax</span>
         <span />
       </div>
       {rows.map((row, index) => (
-        <div key={index} className="grid gap-2 sm:grid-cols-[1fr_5.5rem_7rem_2rem] sm:items-center">
+        <div key={index} className="grid gap-2 sm:grid-cols-[1fr_5.5rem_7rem_3.5rem_2rem] sm:items-center">
           <input
             name="item_description"
             value={row.description}
@@ -54,10 +63,21 @@ export function LineItemsEditor({
             placeholder="75.00"
             className="w-full rounded-xl border border-line bg-white px-3 py-2"
           />
+          <label className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              name="item_taxable"
+              value={String(index)}
+              checked={row.taxable}
+              onChange={(event) => update(index, { taxable: event.target.checked })}
+              aria-label="Charge tax on this line"
+              className="h-4 w-4 accent-[var(--accent)]"
+            />
+          </label>
           <button
             type="button"
             className="text-sm text-muted"
-            onClick={() => setRows((current) => current.filter((_, i) => i !== index))}
+            onClick={() => commit(rows.filter((_, i) => i !== index))}
             aria-label="Remove line"
           >
             ×
@@ -68,7 +88,7 @@ export function LineItemsEditor({
         type="button"
         className="text-sm text-accent underline-offset-2 hover:underline"
         onClick={() =>
-          setRows((current) => [...current, { description: "", quantity: "1", price: "" }])
+          commit([...rows, { description: "", quantity: "1", price: "", taxable: false }])
         }
       >
         Add another line
@@ -78,11 +98,12 @@ export function LineItemsEditor({
 }
 
 export function toLineDrafts(
-  items: { description: string; quantity: number; unitPrice: number }[],
+  items: { description: string; quantity: number; unitPrice: number; taxable?: boolean }[],
 ): LineDraft[] {
   return items.map((item) => ({
     description: item.description,
     quantity: String(item.quantity),
     price: centsToDollars(item.unitPrice),
+    taxable: Boolean(item.taxable),
   }));
 }

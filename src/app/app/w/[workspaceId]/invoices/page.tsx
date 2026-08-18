@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireWorkspace } from "@/lib/workspace";
 import { formatDate } from "@/lib/dates";
-import { formatMoney, invoiceTotal } from "@/lib/money";
+import { formatMoney, invoiceGrandTotal } from "@/lib/money";
 import { StatusBadge } from "@/components/status-badge";
 
 export default async function InvoicesPage({
@@ -65,7 +65,7 @@ export default async function InvoicesPage({
                 </td>
                 <td className="px-5 py-3">{invoice.contractor.name}</td>
                 <td className="px-5 py-3">{formatDate(invoice.issueDate)}</td>
-                <td className="px-5 py-3">{formatMoney(invoiceTotal(invoice.lineItems))}</td>
+                <td className="px-5 py-3">{formatMoney(invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps))}</td>
                 <td className="px-5 py-3">
                   <StatusBadge status={invoice.status} />
                 </td>

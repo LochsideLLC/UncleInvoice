@@ -106,12 +106,17 @@ export async function loginAction(
     return { error: "That email and password do not match." };
   }
   await createSession(user.id);
-  redirect("/app");
+  redirect(safeNext(String(formData.get("next") ?? ""), user.admin));
 }
 
 export async function logoutAction() {
   await destroySession();
   redirect("/");
+}
+
+function safeNext(raw: string, admin: boolean) {
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return admin ? "/admin" : "/app";
 }
 
 export async function requestMagicLinkAction(email: string, userId?: string) {
@@ -162,7 +167,7 @@ export async function consumeLoginToken(token: string) {
     data: { usedAt: new Date() },
   });
   await createSession(user.id);
-  redirect("/app");
+  redirect(safeNext("", user.admin));
 }
 
 export async function setPasswordAction(

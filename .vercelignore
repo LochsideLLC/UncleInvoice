@@ -1,0 +1,6 @@
+.env
+.env.*
+.supabase-db-password
+prisma/*.db
+node_modules
+.git

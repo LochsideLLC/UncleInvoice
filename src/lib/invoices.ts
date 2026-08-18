@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { createToken, hashToken } from "@/lib/crypto";
 import { sendEmail } from "@/lib/mail";
-import { formatMoney, invoiceTotal } from "@/lib/money";
+import { formatMoney, invoiceGrandTotal } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import type { InvoiceStatus } from "@/lib/status";
 
@@ -11,6 +11,7 @@ export type LineInput = {
   description: string;
   quantity: number;
   unitPrice: number;
+  taxable: boolean;
 };
 
 export async function nextInvoiceNumber(workspaceId: string) {
@@ -48,6 +49,7 @@ export function parseLineItems(formData: FormData): LineInput[] {
   const descriptions = formData.getAll("item_description");
   const quantities = formData.getAll("item_quantity");
   const prices = formData.getAll("item_price");
+  const taxed = new Set(formData.getAll("item_taxable").map(String));
   const items: LineInput[] = [];
 
   for (let i = 0; i < descriptions.length; i += 1) {
@@ -56,7 +58,7 @@ export function parseLineItems(formData: FormData): LineInput[] {
     const quantity = Number.parseFloat(String(quantities[i] ?? "1")) || 1;
     const dollars = Number.parseFloat(String(prices[i] ?? "0").replace(/[$,\s]/g, ""));
     const unitPrice = Number.isFinite(dollars) ? Math.round(dollars * 100) : 0;
-    items.push({ description, quantity, unitPrice });
+    items.push({ description, quantity, unitPrice, taxable: taxed.has(String(i)) });
   }
   return items;
 }
@@ -85,7 +87,7 @@ export async function sendForReview(invoiceId: string, actor: { email: string; n
   }
 
   const link = await createReviewLink(invoice.id, invoice.contractor.email);
-  const total = formatMoney(invoiceTotal(invoice.lineItems));
+  const total = formatMoney(invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps));
 
   await sendEmail({
     to: invoice.contractor.email,
@@ -139,7 +141,7 @@ export async function sendInvoiceToClient(invoiceId: string, actor: { email: str
     },
   });
   const viewLink = `${APP_URL}/invoices/view/${invoice.id}?token=${viewToken}`;
-  const total = formatMoney(invoiceTotal(invoice.lineItems));
+  const total = formatMoney(invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps));
 
   await sendEmail({
     to: invoice.workspace.email,

@@ -8,11 +8,12 @@ async function main() {
 
   const bookkeeper = await db.user.upsert({
     where: { email: "ada@ledgerandco.test" },
-    update: { passwordHash, name: "Ada Mensah" },
+    update: { passwordHash, name: "Ada Mensah", admin: true },
     create: {
       email: "ada@ledgerandco.test",
       name: "Ada Mensah",
       passwordHash,
+      admin: true,
     },
   });
 
@@ -183,6 +184,41 @@ async function main() {
           message: "Draft seeded from April mid-month payments.",
         },
       },
+    },
+  });
+
+  await db.sponsor.upsert({
+    where: { slug: "bookkeeping-conroe" },
+    update: {},
+    create: {
+      slug: "bookkeeping-conroe",
+      name: "Bookkeeping Conroe",
+      tagline: "Monthly books, so the close is not a fire drill.",
+      about:
+        "Bookkeeping Conroe handles reconciliations, QuickBooks, and monthly reporting for businesses in Conroe and the Woodlands. We already know what the invoices should say — that’s why we built Uncle Invoice.",
+      url: "https://www.bookkeepingconroe.com",
+      email: "hello@bookkeepingconroe.com",
+      phone: "(936) 283-4346",
+      city: "Conroe, TX",
+      featured: true,
+      sortOrder: 0,
+    },
+  });
+  await db.sponsor.upsert({
+    where: { slug: "southwest-digital" },
+    update: {},
+    create: {
+      slug: "southwest-digital",
+      name: "Southwest Digital",
+      tagline: "Sites, ads, and the kind of marketing that pays for itself.",
+      about:
+        "Southwest Digital is the marketing arm next door: websites, Google Ads, and SEO for businesses that need the phone to ring. Uncle Invoice is one of the tools we put in front of clients.",
+      url: "https://southwestdigital.io",
+      email: "hello@southwestdigital.io",
+      phone: "(936) 283-4346",
+      city: "Conroe, TX",
+      featured: true,
+      sortOrder: 1,
     },
   });
 

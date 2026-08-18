@@ -29,10 +29,11 @@ export async function GET(
   }
 
   const pdf = await buildInvoicePdf(invoice);
+  const download = url.searchParams.get("download") === "1";
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${invoice.number}.pdf"`,
+      "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${invoice.number}.pdf"`,
     },
   });
 }

@@ -10,9 +10,17 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "db:push": "prisma db push",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts"
+    "db:reset": "prisma migrate reset --force",
+    "stack": "docker compose up --build",
+    "datastore:test": "node scripts/datastore.mjs test",
+    "datastore:deploy": "node scripts/datastore.mjs deploy",
+    "datastore:seed": "node scripts/datastore.mjs seed",
+    "dns:vercel": "node scripts/cloudflare-vercel-dns.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

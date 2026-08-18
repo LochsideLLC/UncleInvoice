@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { hashToken } from "@/lib/crypto";
-import { formatMoney, invoiceTotal } from "@/lib/money";
+import { formatMoney, invoiceGrandTotal } from "@/lib/money";
 import { SEEDED_DISCLAIMER } from "@/lib/invoices";
 import { ContractorReviewForm } from "@/components/contractor-review-form";
 import { toDateInput } from "@/lib/dates";
+import { BrandMark } from "@/components/brand-mark";
 
 export default async function ReviewPage({
   params,
@@ -35,18 +36,20 @@ export default async function ReviewPage({
   }
 
   const invoice = record.invoice;
-  const total = invoiceTotal(invoice.lineItems);
+  const total = invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps);
   const alreadyDone = invoice.status === "confirmed" || invoice.status === "sent";
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 py-10">
-      <p className="text-sm uppercase tracking-[0.16em] text-muted">Uncle Invoice</p>
-      <h1 className="mt-3 text-3xl">Hi {invoice.contractor.name.split(" ")[0]} — does this look right?</h1>
+      <BrandMark size="sm" />
+      <h1 className="mt-5 text-3xl">
+        Hi {invoice.contractor.name.split(" ")[0]} — does this look right?
+      </h1>
       <p className="mt-3 text-muted">
         {invoice.workspace.name} asked us to prepare invoice {invoice.number} from their
         books. Amount: <span className="text-ink">{formatMoney(total)}</span>.
       </p>
-      <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
+      <div className="notice mt-5">
         {SEEDED_DISCLAIMER}
       </div>
 

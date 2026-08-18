@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { hashToken } from "@/lib/crypto";
 import { ClaimAccountForm } from "@/components/claim-account-form";
+import { BrandMark } from "@/components/brand-mark";
 
 export default async function ReviewDonePage({
   params,
@@ -19,8 +20,8 @@ export default async function ReviewDonePage({
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 py-12">
-      <p className="text-sm uppercase tracking-[0.16em] text-muted">Uncle Invoice</p>
-      <h1 className="mt-3 text-3xl">Thank you. That invoice is on the record.</h1>
+      <BrandMark size="sm" />
+      <h1 className="mt-5 text-3xl">Thank you. That invoice is on the record.</h1>
       <p className="mt-3 text-muted">
         {invoice
           ? `${invoice.number} from ${invoice.contractor.name} is confirmed${

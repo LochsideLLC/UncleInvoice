@@ -4,16 +4,17 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { signupAction } from "@/actions/auth";
 import { FormBanner } from "@/components/form-banner";
+import { BrandMark } from "@/components/brand-mark";
 
 export default function SignupPage() {
   const [state, action, pending] = useActionState(signupAction, null);
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-6 py-16">
-      <Link href="/" className="mb-8 text-sm text-muted">
-        ← Uncle Invoice
-      </Link>
-      <h1 className="text-3xl">Create your account</h1>
+      <div className="mb-8">
+        <BrandMark />
+      </div>
+      <h1 className="display text-3xl">Create your account</h1>
       <p className="mt-2 text-muted">
         Bookkeepers and business owners start here. Contractors usually arrive from a
         review link — no signup required.
