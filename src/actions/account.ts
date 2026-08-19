@@ -30,8 +30,9 @@ export async function updateProfileAction(
     return { error: "Enter a valid backup email." };
   }
 
-  const clientTerm = CLIENT_TERMS.includes(String(formData.get("clientTerm")))
-    ? String(formData.get("clientTerm"))
+  const raw = String(formData.get("clientTerm"));
+  const clientTerm: (typeof CLIENT_TERMS)[number] = CLIENT_TERMS.includes(raw as (typeof CLIENT_TERMS)[number])
+    ? (raw as (typeof CLIENT_TERMS)[number])
     : "clients";
 
   await db.user.update({
