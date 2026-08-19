@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { BrandMark } from "@/components/brand-mark";
 import { SponsorMark } from "@/components/sponsor-mark";
 import { getSponsorBySlug, hrefFor } from "@/lib/sponsors";
 
@@ -29,9 +28,8 @@ export default async function SponsorPage({
   if (!sponsor) notFound();
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-2xl px-6 py-8">
-      <BrandMark size="sm" />
-      <article className="paper mt-8 rounded-[1.6rem] p-6 sm:p-8">
+    <div className="mx-auto min-h-full w-full max-w-2xl px-6 pb-8">
+      <article className="paper rounded-[1.6rem] p-6 sm:p-8">
         <div className="flex items-start gap-4">
           <SponsorMark name={sponsor.name} logoUrl={sponsor.logoUrl} large />
           <div>

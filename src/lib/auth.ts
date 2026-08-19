@@ -74,4 +74,9 @@ export async function requireAdmin() {
   return user;
 }
 
+export function safeNext(raw: string, admin: boolean) {
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return admin ? "/admin" : "/app";
+}
+
 export { SESSION_COOKIE };

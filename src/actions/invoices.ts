@@ -169,6 +169,7 @@ export async function sendToClientAction(formData: FormData) {
   const { user } = await requireWorkspace(workspaceId);
   await sendInvoiceToClient(invoiceId, user);
   revalidatePath(`/app/w/${workspaceId}/invoices/${invoiceId}`);
+  revalidatePath(`/invoices/view/${invoiceId}`);
 }
 
 export async function contractorUpdateInvoiceAction(
@@ -271,6 +272,47 @@ export async function contractorConfirmAction(
   }
 
   redirect(`/review/${token}/done`);
+}
+
+export async function markAsSentAction(formData: FormData) {
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const invoiceId = String(formData.get("invoiceId") ?? "");
+  const { user } = await requireWorkspace(workspaceId);
+  const sentAt = parseDate(formData.get("sentDate")) ?? new Date();
+  await db.invoice.update({
+    where: { id: invoiceId },
+    data: { status: "sent" satisfies InvoiceStatus, sentAt },
+  });
+  await recordEvent(invoiceId, "sent", "Marked as sent to client.", user);
+  revalidatePath(`/app/w/${workspaceId}/invoices/${invoiceId}`);
+}
+
+export async function markAsPaidAction(formData: FormData) {
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const invoiceId = String(formData.get("invoiceId") ?? "");
+  const { user } = await requireWorkspace(workspaceId);
+
+  const amountDollars = parseFloat(String(formData.get("amount") ?? ""));
+  if (isNaN(amountDollars) || amountDollars <= 0) return;
+  const amountCents = Math.round(amountDollars * 100);
+
+  const paidDate = parseDate(formData.get("paidDate")) ?? new Date();
+  const method = String(formData.get("method") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  await db.invoice.update({
+    where: { id: invoiceId },
+    data: { amountPaid: amountCents },
+  });
+
+  const parts: string[] = [`Payment of $${amountDollars.toFixed(2)} received`];
+  if (method) parts.push(`via ${method}`);
+  parts.push(`on ${paidDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`);
+  if (note) parts.push(`(${note})`);
+  await recordEvent(invoiceId, "paid", parts.join(" ") + ".", user);
+
+  revalidatePath(`/app/w/${workspaceId}/invoices/${invoiceId}`);
+  revalidatePath(`/invoices/view/${invoiceId}`);
 }
 
 async function loadReviewToken(token: string) {

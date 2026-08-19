@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { hashToken } from "@/lib/crypto";
 import { getSessionUser } from "@/lib/auth";
-import { SiteHeader } from "@/components/site-header";
+import { invoiceGrandTotal } from "@/lib/money";
 import { InvoiceDocument, invoiceToDocument } from "@/components/invoice-document";
 import { InvoiceActions } from "@/components/invoice-actions";
+import { InvoiceStatusBar } from "@/components/invoice-status-bar";
 
 export default async function PublicInvoicePage({
   params,
@@ -30,24 +31,62 @@ export default async function PublicInvoicePage({
   if (!allowed) notFound();
 
   const pdfHref = `/api/invoices/${invoice.id}/pdf${token ? `?token=${token}` : ""}`;
-  const user = await getSessionUser();
+  const editHref = `/create?edit=${invoice.id}${token ? `&token=${token}` : ""}`;
+  const totalCents = invoiceGrandTotal(invoice.lineItems, invoice.taxRateBps);
+  const isOwner = !token;
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-6xl px-5 py-8">
-      <div className="print:hidden">
-        <SiteHeader
-          user={user}
-          extra={
-            <Link href="/create" className="hover:text-ink">
-              New invoice
-            </Link>
-          }
-        />
-      </div>
-      <p className="mb-4 text-muted print:hidden">Here&apos;s what you made. Look it over before you download.</p>
-      <InvoiceDocument invoice={invoiceToDocument(invoice)} />
-      <div className="mt-6">
+    <div className="mx-auto min-h-full w-full max-w-6xl px-5 pb-8">
+      <div className="mb-6 flex items-center justify-between print:hidden">
+        {isOwner ? (
+          <Link
+            href="/app"
+            className="text-sm text-muted hover:text-ink"
+          >
+            ← All invoices
+          </Link>
+        ) : (
+          <span />
+        )}
         <InvoiceActions pdfHref={pdfHref} />
+      </div>
+
+      {isOwner && (
+        <InvoiceStatusBar
+          workspaceId={invoice.workspaceId}
+          invoiceId={invoice.id}
+          status={invoice.status}
+          sentAt={invoice.sentAt}
+          dueDate={invoice.dueDate}
+          totalCents={totalCents}
+          amountPaid={invoice.amountPaid}
+          clientEmail={invoice.workspace.email}
+        />
+      )}
+
+      <div className="relative mt-4">
+        <InvoiceDocument invoice={invoiceToDocument(invoice)} />
+        {isOwner && invoice.status !== "sent" && (
+          <Link
+            href={editHref}
+            aria-label="Edit invoice"
+            className="print:hidden absolute right-4 top-4 rounded-lg p-2 text-muted transition hover:bg-paper-2 hover:text-ink"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L5 13H3v-2L11.5 2.5Z" />
+              <path d="M9.5 4.5l2 2" />
+            </svg>
+          </Link>
+        )}
       </div>
     </div>
   );

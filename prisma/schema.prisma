@@ -14,7 +14,22 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String
+  backupEmail  String?
   passwordHash String?
+  logoUrl              String?
+  businessLogoUrl      String?
+  businessWordmarkUrl  String?
+  businessLogoKind     String   @default("mark")
+  businessName         String?
+  businessEmail        String?
+  phone        String?
+  addressLine  String?
+  addressLine2 String?
+  city         String?
+  region       String?
+  postalCode   String?
+  taxId        String?
+  clientTerm   String   @default("clients")
   admin        Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

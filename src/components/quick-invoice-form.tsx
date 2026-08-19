@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, type FormEvent } from "react";
 import { createPublicInvoiceAction } from "@/actions/public-invoice";
 import { FormBanner } from "@/components/form-banner";
+import { UncleInvoiceCredit } from "@/components/invoice-document";
 import { PAYMENT_TERMS } from "@/lib/invoice-fields";
+import { formatUsPhone } from "@/lib/us-address";
 import {
   amountDue,
   dollarsToCents,
@@ -40,42 +42,83 @@ function dueFromTerms(issueDate: string, terms: string): string {
 export function QuickInvoiceForm({
   defaultFromName = "",
   defaultFromEmail = "",
+  defaultFromCompany = "",
+  defaultFromPhone = "",
+  defaultFromAddressLine = "",
+  defaultFromCity = "",
+  defaultFromRegion = "",
+  defaultFromPostalCode = "",
+  invoiceId,
+  viewToken,
+  defaults,
 }: {
   defaultFromName?: string;
   defaultFromEmail?: string;
+  defaultFromCompany?: string;
+  defaultFromPhone?: string;
+  defaultFromAddressLine?: string;
+  defaultFromCity?: string;
+  defaultFromRegion?: string;
+  defaultFromPostalCode?: string;
+  invoiceId?: string;
+  viewToken?: string;
+  defaults?: {
+    invoiceNumber?: string;
+    issueDate?: string;
+    dueDate?: string;
+    paymentTerms?: string;
+    poNumber?: string;
+    taxRate?: string;
+    notes?: string;
+    paymentInstructions?: string;
+    paymentState?: "unpaid" | "partial" | "paid";
+    amountPaid?: string;
+    billToName?: string;
+    billToContactName?: string;
+    billToEmail?: string;
+    billToPhone?: string;
+    billToAddressLine?: string;
+    billToCity?: string;
+    billToRegion?: string;
+    billToPostalCode?: string;
+    lines?: LineDraft[];
+  };
 }) {
   const [state, action, pending] = useActionState(createPublicInvoiceAction, null);
   const today = new Date().toISOString().slice(0, 10);
-  const [fromName, setFromName] = useState("");
+  const [fromName, setFromName] = useState(defaultFromCompany);
   const [fromContactName, setFromContactName] = useState(defaultFromName);
   const [fromEmail, setFromEmail] = useState(defaultFromEmail);
-  const [fromPhone, setFromPhone] = useState("");
-  const [fromAddressLine, setFromAddressLine] = useState("");
-  const [fromCity, setFromCity] = useState("");
-  const [fromRegion, setFromRegion] = useState("");
-  const [fromPostalCode, setFromPostalCode] = useState("");
-  const [billToName, setBillToName] = useState("");
-  const [billToContactName, setBillToContactName] = useState("");
-  const [billToEmail, setBillToEmail] = useState("");
-  const [billToPhone, setBillToPhone] = useState("");
-  const [billToAddressLine, setBillToAddressLine] = useState("");
-  const [billToCity, setBillToCity] = useState("");
-  const [billToRegion, setBillToRegion] = useState("");
-  const [billToPostalCode, setBillToPostalCode] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [issueDate, setIssueDate] = useState(today);
-  const [dueDate, setDueDate] = useState("");
-  const [paymentTerms, setPaymentTerms] = useState("");
-  const [poNumber, setPoNumber] = useState("");
-  const [taxRate, setTaxRate] = useState("");
-  const [paymentState, setPaymentState] = useState<"unpaid" | "partial" | "paid">("unpaid");
-  const [amountPaidInput, setAmountPaidInput] = useState("");
-  const [paymentInstructions, setPaymentInstructions] = useState("");
-  const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<LineDraft[]>([
-    { description: "", quantity: "1", price: "", taxable: false },
-  ]);
+  const [fromPhone, setFromPhone] = useState(formatUsPhone(defaultFromPhone));
+  const [fromAddressLine, setFromAddressLine] = useState(defaultFromAddressLine);
+  const [fromCity, setFromCity] = useState(defaultFromCity);
+  const [fromRegion, setFromRegion] = useState(defaultFromRegion);
+  const [fromPostalCode, setFromPostalCode] = useState(defaultFromPostalCode);
+  const [billToName, setBillToName] = useState(defaults?.billToName ?? "");
+  const [billToContactName, setBillToContactName] = useState(defaults?.billToContactName ?? "");
+  const [billToEmail, setBillToEmail] = useState(defaults?.billToEmail ?? "");
+  const [billToPhone, setBillToPhone] = useState(formatUsPhone(defaults?.billToPhone ?? ""));
+  const [billToAddressLine, setBillToAddressLine] = useState(defaults?.billToAddressLine ?? "");
+  const [billToCity, setBillToCity] = useState(defaults?.billToCity ?? "");
+  const [billToRegion, setBillToRegion] = useState(defaults?.billToRegion ?? "");
+  const [billToPostalCode, setBillToPostalCode] = useState(defaults?.billToPostalCode ?? "");
+  const [invoiceNumber, setInvoiceNumber] = useState(defaults?.invoiceNumber ?? "");
+  const [issueDate, setIssueDate] = useState(defaults?.issueDate ?? today);
+  const [dueDate, setDueDate] = useState(defaults?.dueDate ?? "");
+  const [paymentTerms, setPaymentTerms] = useState(defaults?.paymentTerms ?? "");
+  const [poNumber, setPoNumber] = useState(defaults?.poNumber ?? "");
+  const [taxRate, setTaxRate] = useState(defaults?.taxRate ?? "");
+  const [paymentState, setPaymentState] = useState<"unpaid" | "partial" | "paid">(
+    defaults?.paymentState ?? "unpaid",
+  );
+  const [amountPaidInput, setAmountPaidInput] = useState(defaults?.amountPaid ?? "");
+  const [paymentInstructions, setPaymentInstructions] = useState(defaults?.paymentInstructions ?? "");
+  const [notes, setNotes] = useState(defaults?.notes ?? "");
+  const [lines, setLines] = useState<LineDraft[]>(
+    defaults?.lines ?? [{ description: "", quantity: "1", price: "", taxable: false }],
+  );
   const [dateWarn, setDateWarn] = useState(false);
+  const [taxRateWarn, setTaxRateWarn] = useState(false);
 
   const pricedLines = useMemo(
     () =>
@@ -108,173 +151,28 @@ export function QuickInvoiceForm({
     setLines((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
+  const taxNeeded = lines.some((row) => row.taxable) && !(Number.parseFloat(taxRate) > 0);
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!taxNeeded) return;
+    event.preventDefault();
+    setTaxRateWarn(true);
+    document.getElementById("taxRate")?.focus();
+  }
+
   return (
-    <form action={action} className="space-y-6">
-      <FormBanner state={state} />
+    <form action={action} onSubmit={onSubmit} className="space-y-6">
+      {invoiceId ? <input type="hidden" name="invoiceId" value={invoiceId} /> : null}
+      {viewToken ? <input type="hidden" name="viewToken" value={viewToken} /> : null}
+      <FormBanner
+        state={
+          taxRateWarn && taxNeeded
+            ? { error: "You marked a line for tax. Enter the tax rate." }
+            : state
+        }
+      />
       <article className="invoice-sheet paper rounded-[1.4rem] p-6 sm:p-10">
-        <div className="grid gap-8 sm:grid-cols-2">
-          <div className="invoice-fields">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Bill to</p>
-            <input
-              id="billToName"
-              name="billToName"
-              required
-              aria-label="Client company"
-              className="invoice-input"
-              value={billToName}
-              onChange={(event) => setBillToName(event.target.value)}
-              placeholder="Company"
-            />
-            <input
-              id="billToContactName"
-              name="billToContactName"
-              aria-label="Attn"
-              className="invoice-input"
-              value={billToContactName}
-              onChange={(event) => setBillToContactName(event.target.value)}
-              placeholder="Attn (optional)"
-            />
-            <input
-              id="billToAddressLine"
-              name="billToAddressLine"
-              aria-label="Client street address"
-              className="invoice-input"
-              value={billToAddressLine}
-              onChange={(event) => setBillToAddressLine(event.target.value)}
-              placeholder="Street address"
-            />
-            <div className="grid grid-cols-[minmax(0,1fr)_5.75rem_6.5rem] gap-3">
-              <input
-                id="billToCity"
-                name="billToCity"
-                aria-label="Client city"
-                className="invoice-input"
-                value={billToCity}
-                onChange={(event) => setBillToCity(event.target.value)}
-                placeholder="City"
-              />
-              <input
-                id="billToRegion"
-                name="billToRegion"
-                aria-label="Client state"
-                className="invoice-input"
-                value={billToRegion}
-                onChange={(event) => setBillToRegion(event.target.value)}
-                placeholder="State"
-              />
-              <input
-                id="billToPostalCode"
-                name="billToPostalCode"
-                aria-label="Client ZIP"
-                className="invoice-input"
-                value={billToPostalCode}
-                onChange={(event) => setBillToPostalCode(event.target.value)}
-                placeholder="ZIP"
-              />
-            </div>
-            <input
-              id="billToEmail"
-              name="billToEmail"
-              type="email"
-              required
-              aria-label="Client email"
-              className="invoice-input"
-              value={billToEmail}
-              onChange={(event) => setBillToEmail(event.target.value)}
-              placeholder="ap@client.com"
-            />
-            <input
-              id="billToPhone"
-              name="billToPhone"
-              aria-label="Client phone"
-              className="invoice-input"
-              value={billToPhone}
-              onChange={(event) => setBillToPhone(event.target.value)}
-              placeholder="Phone"
-            />
-          </div>
-
-          <div className="invoice-fields">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">From</p>
-            <input
-              id="fromContactName"
-              name="fromContactName"
-              aria-label="Your name"
-              className="invoice-input"
-              value={fromContactName}
-              onChange={(event) => setFromContactName(event.target.value)}
-              placeholder="Your name"
-            />
-            <input
-              id="fromName"
-              name="fromName"
-              aria-label="Your company"
-              className="invoice-input"
-              value={fromName}
-              onChange={(event) => setFromName(event.target.value)}
-              placeholder="Company"
-            />
-            <input
-              id="fromAddressLine"
-              name="fromAddressLine"
-              aria-label="Your street address"
-              className="invoice-input"
-              value={fromAddressLine}
-              onChange={(event) => setFromAddressLine(event.target.value)}
-              placeholder="Street address"
-            />
-            <div className="grid grid-cols-[minmax(0,1fr)_5.75rem_6.5rem] gap-3">
-              <input
-                id="fromCity"
-                name="fromCity"
-                aria-label="City"
-                className="invoice-input"
-                value={fromCity}
-                onChange={(event) => setFromCity(event.target.value)}
-                placeholder="City"
-              />
-              <input
-                id="fromRegion"
-                name="fromRegion"
-                aria-label="State"
-                className="invoice-input"
-                value={fromRegion}
-                onChange={(event) => setFromRegion(event.target.value)}
-                placeholder="State"
-              />
-              <input
-                id="fromPostalCode"
-                name="fromPostalCode"
-                aria-label="ZIP"
-                className="invoice-input"
-                value={fromPostalCode}
-                onChange={(event) => setFromPostalCode(event.target.value)}
-                placeholder="ZIP"
-              />
-            </div>
-            <input
-              id="fromEmail"
-              name="fromEmail"
-              type="email"
-              aria-label="Your email"
-              className="invoice-input"
-              value={fromEmail}
-              onChange={(event) => setFromEmail(event.target.value)}
-              placeholder="you@company.com"
-            />
-            <input
-              id="fromPhone"
-              name="fromPhone"
-              aria-label="Your phone"
-              className="invoice-input"
-              value={fromPhone}
-              onChange={(event) => setFromPhone(event.target.value)}
-              placeholder="Phone"
-            />
-          </div>
-        </div>
-
-        <div className="invoice-meta mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="invoice-meta mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <label className="flex flex-col text-xs font-semibold uppercase tracking-wide text-muted">
             Invoice number
             <input
@@ -376,6 +274,171 @@ export function QuickInvoiceForm({
             />
           </label>
         </div>
+        <div className="grid gap-8 sm:grid-cols-2">
+          <div className="invoice-fields">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Bill to</p>
+            <input
+              id="billToName"
+              name="billToName"
+              required
+              aria-label="Client company"
+              className="invoice-input"
+              value={billToName}
+              onChange={(event) => setBillToName(event.target.value)}
+              placeholder="Company"
+            />
+            <input
+              id="billToContactName"
+              name="billToContactName"
+              aria-label="Attn"
+              className="invoice-input"
+              value={billToContactName}
+              onChange={(event) => setBillToContactName(event.target.value)}
+              placeholder="Attn (optional)"
+            />
+            <input
+              id="billToAddressLine"
+              name="billToAddressLine"
+              aria-label="Client street address"
+              className="invoice-input"
+              value={billToAddressLine}
+              onChange={(event) => setBillToAddressLine(event.target.value)}
+              placeholder="Street address"
+            />
+            <div className="grid grid-cols-[minmax(0,1fr)_5.75rem_6.5rem] gap-3">
+              <input
+                id="billToCity"
+                name="billToCity"
+                aria-label="Client city"
+                className="invoice-input"
+                value={billToCity}
+                onChange={(event) => setBillToCity(event.target.value)}
+                placeholder="City"
+              />
+              <input
+                id="billToRegion"
+                name="billToRegion"
+                aria-label="Client state"
+                className="invoice-input"
+                value={billToRegion}
+                onChange={(event) => setBillToRegion(event.target.value)}
+                placeholder="State"
+              />
+              <input
+                id="billToPostalCode"
+                name="billToPostalCode"
+                aria-label="Client ZIP"
+                className="invoice-input"
+                value={billToPostalCode}
+                onChange={(event) => setBillToPostalCode(event.target.value)}
+                placeholder="ZIP"
+              />
+            </div>
+            <input
+              id="billToEmail"
+              name="billToEmail"
+              type="email"
+              required
+              aria-label="Client email"
+              className="invoice-input"
+              value={billToEmail}
+              onChange={(event) => setBillToEmail(event.target.value)}
+              placeholder="ap@client.com"
+            />
+            <input
+              id="billToPhone"
+              name="billToPhone"
+              aria-label="Client phone"
+              className="invoice-input"
+              type="tel"
+              inputMode="tel"
+              value={billToPhone}
+              onChange={(event) => setBillToPhone(formatUsPhone(event.target.value))}
+              placeholder="(555) 555-5555"
+            />
+          </div>
+
+          <div className="invoice-fields">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">From</p>
+            <input
+              id="fromContactName"
+              name="fromContactName"
+              aria-label="Your name"
+              className="invoice-input"
+              value={fromContactName}
+              onChange={(event) => setFromContactName(event.target.value)}
+              placeholder="Your name"
+            />
+            <input
+              id="fromName"
+              name="fromName"
+              aria-label="Your company"
+              className="invoice-input"
+              value={fromName}
+              onChange={(event) => setFromName(event.target.value)}
+              placeholder="Company"
+            />
+            <input
+              id="fromAddressLine"
+              name="fromAddressLine"
+              aria-label="Your street address"
+              className="invoice-input"
+              value={fromAddressLine}
+              onChange={(event) => setFromAddressLine(event.target.value)}
+              placeholder="Street address"
+            />
+            <div className="grid grid-cols-[minmax(0,1fr)_5.75rem_6.5rem] gap-3">
+              <input
+                id="fromCity"
+                name="fromCity"
+                aria-label="City"
+                className="invoice-input"
+                value={fromCity}
+                onChange={(event) => setFromCity(event.target.value)}
+                placeholder="City"
+              />
+              <input
+                id="fromRegion"
+                name="fromRegion"
+                aria-label="State"
+                className="invoice-input"
+                value={fromRegion}
+                onChange={(event) => setFromRegion(event.target.value)}
+                placeholder="State"
+              />
+              <input
+                id="fromPostalCode"
+                name="fromPostalCode"
+                aria-label="ZIP"
+                className="invoice-input"
+                value={fromPostalCode}
+                onChange={(event) => setFromPostalCode(event.target.value)}
+                placeholder="ZIP"
+              />
+            </div>
+            <input
+              id="fromEmail"
+              name="fromEmail"
+              type="email"
+              aria-label="Your email"
+              className="invoice-input"
+              value={fromEmail}
+              onChange={(event) => setFromEmail(event.target.value)}
+              placeholder="you@company.com"
+            />
+            <input
+              id="fromPhone"
+              name="fromPhone"
+              aria-label="Your phone"
+              className="invoice-input"
+              type="tel"
+              inputMode="tel"
+              value={fromPhone}
+              onChange={(event) => setFromPhone(formatUsPhone(event.target.value))}
+              placeholder="(555) 555-5555"
+            />
+          </div>
+        </div>
 
         <div className="mt-8 overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -442,7 +505,11 @@ export function QuickInvoiceForm({
                         name="item_taxable"
                         value={String(index)}
                         checked={row.taxable}
-                        onChange={(event) => updateLine(index, { taxable: event.target.checked })}
+                        onChange={(event) => {
+                          const taxable = event.target.checked;
+                          updateLine(index, { taxable });
+                          if (taxable && !(Number.parseFloat(taxRate) > 0)) setTaxRateWarn(true);
+                        }}
                         aria-label={`Charge tax on line ${index + 1}`}
                         className="h-4 w-4 accent-[var(--accent)]"
                       />
@@ -504,19 +571,30 @@ export function QuickInvoiceForm({
             <span className="tabular-nums">{formatMoney(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between gap-3 text-muted">
-            <label className="inline-flex items-center gap-1">
+            <label className="inline-flex flex-wrap items-center gap-1">
               <span>Tax</span>
               <input
                 id="taxRate"
                 name="taxRate"
                 inputMode="decimal"
                 aria-label="Tax percent"
-                className="invoice-input w-14 text-right tabular-nums"
+                className={`invoice-input w-14 text-right tabular-nums ${
+                  taxRateWarn && taxNeeded ? "ring-2 ring-accent" : ""
+                }`}
                 value={taxRate}
-                onChange={(event) => setTaxRate(event.target.value)}
-                placeholder="0"
+                aria-invalid={taxRateWarn && taxNeeded}
+                onChange={(event) => {
+                  setTaxRate(event.target.value);
+                  if (Number.parseFloat(event.target.value) > 0) setTaxRateWarn(false);
+                }}
+                placeholder="%"
               />
               <span>%</span>
+              {taxRateWarn && taxNeeded ? (
+                <span className="basis-full text-xs font-medium normal-case tracking-normal text-accent">
+                  Enter the tax rate
+                </span>
+              ) : null}
             </label>
             <span className="tabular-nums">{formatMoney(tax)}</span>
           </div>
@@ -594,10 +672,11 @@ export function QuickInvoiceForm({
             />
           </div>
         </div>
+        <UncleInvoiceCredit />
       </article>
 
       <button className="btn btn-primary w-full" disabled={pending}>
-        {pending ? "Saving…" : "Looks good — create it"}
+        {pending ? "Saving…" : invoiceId ? "Save changes" : "Looks good — create it"}
       </button>
     </form>
   );

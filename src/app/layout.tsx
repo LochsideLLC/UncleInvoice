@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { getSessionUser } from "@/lib/auth";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -19,10 +22,20 @@ export const metadata: Metadata = {
     "Uncle already did the paperwork. Seed invoices from the books, text the contractor a link, and get a confirmed invoice back.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getSessionUser();
+
   return (
-    <html lang="en" className={`${fraunces.variable} ${sourceSans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-background text-foreground">{children}</body>
+    <html lang="en" className={`${fraunces.variable} ${sourceSans.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="flex min-h-full flex-col bg-background text-foreground">
+        <div className="print:hidden pt-8">
+          <SiteHeader user={user} />
+        </div>
+        <main className="flex-1 pb-16">
+          {children}
+        </main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

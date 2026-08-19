@@ -49,8 +49,13 @@ export async function createPublicInvoiceAction(
   if (!items.length) return { error: "Add at least one line." };
   const business = parseBusinessInvoiceFields(formData, issueDate);
   if ("error" in business) return { error: business.error };
+  if (items.some((item) => item.taxable) && !business.taxRateBps) {
+    return { error: "You marked a line for tax. Enter the tax rate." };
+  }
 
   const user = await getSessionUser();
+  const existingId = String(formData.get("invoiceId") ?? "").trim();
+  const viewToken = String(formData.get("viewToken") ?? "").trim();
   const owner =
     user ??
     (await db.user.upsert({
@@ -59,14 +64,48 @@ export async function createPublicInvoiceAction(
       create: { email: GUEST_EMAIL, name: "Uncle Invoice" },
     }));
 
-  let workspace = user
-    ? await db.workspace.findFirst({
-        where: {
-          email: parsed.data.billToEmail,
-          members: { some: { userId: user.id } },
-        },
+  let existingInvoice = existingId
+    ? await db.invoice.findUnique({
+        where: { id: existingId },
+        include: { tokens: true },
       })
     : null;
+  if (existingId && !existingInvoice) {
+    return { error: "That invoice could not be found." };
+  }
+  if (existingInvoice) {
+    const userCanEdit = user
+      ? Boolean(
+          await db.workspaceMember.findUnique({
+            where: {
+              workspaceId_userId: { workspaceId: existingInvoice.workspaceId, userId: user.id },
+            },
+          }),
+        )
+      : false;
+    const tokenOk =
+      Boolean(viewToken) &&
+      existingInvoice.tokens.some(
+        (record) =>
+          record.purpose === "invoice_view" &&
+          record.tokenHash === hashToken(viewToken) &&
+          record.expiresAt >= new Date(),
+      );
+    if (!userCanEdit && !tokenOk) {
+      return { error: "You cannot edit this invoice." };
+    }
+  }
+
+  let workspace = existingInvoice
+    ? await db.workspace.findUniqueOrThrow({ where: { id: existingInvoice.workspaceId } })
+    : user
+      ? await db.workspace.findFirst({
+          where: {
+            email: parsed.data.billToEmail,
+            members: { some: { userId: user.id } },
+          },
+        })
+      : null;
 
   if (!workspace) {
     workspace = await db.workspace.create({
@@ -88,6 +127,7 @@ export async function createPublicInvoiceAction(
       where: { id: workspace.id },
       data: {
         name: parsed.data.billToName || parsed.data.billToContactName,
+        email: parsed.data.billToEmail,
         phone: business.billToPhone ?? workspace.phone,
         addressLine: business.billToAddressLine ?? workspace.addressLine,
         city: business.billToCity ?? workspace.city,
@@ -136,6 +176,46 @@ export async function createPublicInvoiceAction(
   }
 
   const requestedNumber = String(formData.get("invoiceNumber") ?? "").trim();
+  const total = invoiceGrandTotal(items, business.taxRateBps);
+  const amountPaid = parseAmountPaid(formData, total);
+
+  if (existingInvoice) {
+    const number = requestedNumber || existingInvoice.number;
+    if (number !== existingInvoice.number) {
+      const taken = await db.invoice.findUnique({
+        where: { workspaceId_number: { workspaceId: existingInvoice.workspaceId, number } },
+      });
+      if (taken) return { error: "That invoice number is already used." };
+    }
+    await db.invoiceLineItem.deleteMany({ where: { invoiceId: existingInvoice.id } });
+    await db.invoice.update({
+      where: { id: existingInvoice.id },
+      data: {
+        contractorId: contractor.id,
+        number,
+        issueDate,
+        ...invoiceBusinessData(business),
+        amountPaid,
+        notes: String(formData.get("notes") ?? "").trim() || null,
+        confirmedByEmail: fromEmail,
+        lineItems: {
+          create: items.map((item, index) => ({ ...item, sortOrder: index })),
+        },
+      },
+    });
+    await recordEvent(
+      existingInvoice.id,
+      "edited",
+      "Invoice edited from the preview.",
+      user ?? { email: fromEmail, name: parsed.data.fromContactName || parsed.data.fromName },
+    );
+    redirect(
+      viewToken
+        ? `/invoices/view/${existingInvoice.id}?token=${viewToken}`
+        : `/invoices/view/${existingInvoice.id}`,
+    );
+  }
+
   const number = requestedNumber || (await nextInvoiceNumber(workspace.id));
   if (requestedNumber) {
     const taken = await db.invoice.findUnique({
@@ -143,8 +223,6 @@ export async function createPublicInvoiceAction(
     });
     if (taken) return { error: "That invoice number is already used." };
   }
-  const total = invoiceGrandTotal(items, business.taxRateBps);
-  const amountPaid = parseAmountPaid(formData, total);
   const invoice = await db.invoice.create({
     data: {
       workspaceId: workspace.id,

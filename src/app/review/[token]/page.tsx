@@ -5,8 +5,6 @@ import { formatMoney, invoiceGrandTotal } from "@/lib/money";
 import { SEEDED_DISCLAIMER } from "@/lib/invoices";
 import { ContractorReviewForm } from "@/components/contractor-review-form";
 import { toDateInput } from "@/lib/dates";
-import { BrandMark } from "@/components/brand-mark";
-
 export default async function ReviewPage({
   params,
 }: {
@@ -40,9 +38,8 @@ export default async function ReviewPage({
   const alreadyDone = invoice.status === "confirmed" || invoice.status === "sent";
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-xl px-5 py-10">
-      <BrandMark size="sm" />
-      <h1 className="mt-5 text-3xl">
+    <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-10">
+      <h1 className="text-3xl">
         Hi {invoice.contractor.name.split(" ")[0]} — does this look right?
       </h1>
       <p className="mt-3 text-muted">

@@ -1,0 +1,146 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { optionalText } from "@/lib/invoice-fields";
+import { formatUsPhone, phoneDigits } from "@/lib/us-address";
+import type { ActionState } from "@/actions/auth";
+
+import { CLIENT_TERMS } from "@/lib/client-terms";
+
+const MAX_LOGO_CHARS = 400_000;
+const LOGO_PATTERN = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=\s]+$/;
+
+function refreshAccountPages() {
+  revalidatePath("/", "layout");
+  revalidatePath("/app");
+  revalidatePath("/app/profile");
+}
+
+export async function updateProfileAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { error: "Name is required." };
+  const backupEmail = optionalText(formData.get("backupEmail"))?.toLowerCase() ?? null;
+  if (backupEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(backupEmail)) {
+    return { error: "Enter a valid backup email." };
+  }
+
+  const clientTerm = CLIENT_TERMS.includes(String(formData.get("clientTerm")))
+    ? String(formData.get("clientTerm"))
+    : "clients";
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { name, backupEmail, clientTerm },
+  });
+  refreshAccountPages();
+  return { ok: true, message: "Profile saved." };
+}
+
+export async function updateBusinessAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const businessEmail = optionalText(formData.get("businessEmail"))?.toLowerCase() ?? null;
+  if (businessEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail)) {
+    return { error: "Enter a valid email." };
+  }
+  const rawPhone = optionalText(formData.get("phone"));
+  if (rawPhone && phoneDigits(rawPhone).length !== 10) {
+    return { error: "Enter a 10-digit phone number." };
+  }
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      businessName: optionalText(formData.get("businessName")),
+      businessEmail,
+      phone: rawPhone ? formatUsPhone(rawPhone) : null,
+      addressLine: optionalText(formData.get("addressLine")),
+      addressLine2: optionalText(formData.get("addressLine2")),
+      city: optionalText(formData.get("city")),
+      region: optionalText(formData.get("region")),
+      postalCode: optionalText(formData.get("postalCode")),
+      businessLogoKind: parseLogoKind(formData.get("businessLogoKind")),
+    },
+  });
+  refreshAccountPages();
+  return { ok: true, message: "Business info saved." };
+}
+
+function parseLogoKind(value: FormDataEntryValue | null) {
+  return value === "wide" ? "wide" : "mark";
+}
+
+export async function updateLogoAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const logoUrl = String(formData.get("logoUrl") ?? "").trim();
+  if (!LOGO_PATTERN.test(logoUrl) || logoUrl.length > MAX_LOGO_CHARS) {
+    return { error: "Use a JPG or PNG under about 300 KB." };
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { logoUrl },
+  });
+  refreshAccountPages();
+  return { ok: true, message: "Logo saved." };
+}
+
+export async function removeLogoAction(): Promise<void> {
+  const user = await requireUser();
+  await db.user.update({
+    where: { id: user.id },
+    data: { logoUrl: null },
+  });
+  refreshAccountPages();
+}
+
+export async function updateBusinessLogoAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const image = String(formData.get("logoUrl") ?? "").trim();
+  const kind = parseLogoKind(formData.get("kind"));
+  if (!LOGO_PATTERN.test(image) || image.length > MAX_LOGO_CHARS) {
+    return { error: "Use a JPG or PNG under about 300 KB." };
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data:
+      kind === "wide"
+        ? { businessWordmarkUrl: image, businessLogoKind: "wide" }
+        : { businessLogoUrl: image, businessLogoKind: "mark" },
+  });
+  refreshAccountPages();
+  return { ok: true, message: "Business logo saved." };
+}
+
+export async function removeBusinessLogoAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const kind = parseLogoKind(formData.get("kind"));
+  await db.user.update({
+    where: { id: user.id },
+    data: kind === "wide" ? { businessWordmarkUrl: null } : { businessLogoUrl: null },
+  });
+  refreshAccountPages();
+}
+
+export async function updateBusinessLogoKindAction(kind: "mark" | "wide"): Promise<void> {
+  const user = await requireUser();
+  await db.user.update({
+    where: { id: user.id },
+    data: { businessLogoKind: kind },
+  });
+  refreshAccountPages();
+}

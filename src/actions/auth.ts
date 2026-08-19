@@ -7,6 +7,7 @@ import {
   createSession,
   destroySession,
   hashPassword,
+  safeNext,
   verifyPassword,
 } from "@/lib/auth";
 import { createToken, hashToken } from "@/lib/crypto";
@@ -112,11 +113,6 @@ export async function loginAction(
 export async function logoutAction() {
   await destroySession();
   redirect("/");
-}
-
-function safeNext(raw: string, admin: boolean) {
-  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
-  return admin ? "/admin" : "/app";
 }
 
 export async function requestMagicLinkAction(email: string, userId?: string) {

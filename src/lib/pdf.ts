@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFString, StandardFonts, rgb } from "pdf-lib";
 import { formatDate } from "@/lib/dates";
 import {
   amountDue,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/money";
 
 type PdfInvoice = {
+  showBrand?: boolean;
   number: string;
   issueDate: Date;
   dueDate?: Date | null;
@@ -276,6 +277,26 @@ export async function buildInvoicePdf(invoice: PdfInvoice): Promise<Buffer> {
       `Confirmed by ${invoice.confirmedByEmail ?? invoice.contractor.name} on ${formatDate(invoice.confirmedAt)}.`,
       { x: left, y, size: 9, font, color: green },
     );
+  }
+
+  if (invoice.showBrand !== false) {
+    const site = "uncleinvoice.com";
+    const tag = "Generate free invoices";
+    const siteWidth = bold.widthOfTextAtSize(site, 10);
+    const tagWidth = font.widthOfTextAtSize(tag, 8);
+    const siteX = (612 - siteWidth) / 2;
+    text(site, { x: siteX, y: 44, size: 10, font: bold, color: ink });
+    text(tag, { x: (612 - tagWidth) / 2, y: 32, size: 8, font, color: muted });
+    const link = doc.context.register(
+      doc.context.obj({
+        Type: "Annot",
+        Subtype: "Link",
+        Rect: [siteX, 40, siteX + siteWidth, 56],
+        Border: [0, 0, 0],
+        A: { Type: "Action", S: "URI", URI: PDFString.of("https://uncleinvoice.com") },
+      }),
+    );
+    page.node.addAnnot(link);
   }
 
   const bytes = await doc.save();

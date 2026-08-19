@@ -152,7 +152,26 @@ export function invoiceToDocument(invoice: {
   };
 }
 
-export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
+export function UncleInvoiceCredit({ show = true }: { show?: boolean }) {
+  if (!show) return null;
+  return (
+    <a
+      href="https://uncleinvoice.com"
+      className="mt-10 flex flex-col items-center gap-1 border-t border-line pt-5 text-center"
+    >
+      <span className="text-sm font-semibold text-ink">uncleinvoice.com</span>
+      <span className="text-xs text-muted">Generate free invoices</span>
+    </a>
+  );
+}
+
+export function InvoiceDocument({
+  invoice,
+  showBrand = true,
+}: {
+  invoice: InvoiceDocumentData;
+  showBrand?: boolean;
+}) {
   const subtotal = invoiceTotal(invoice.lineItems);
   const tax = taxCents(taxableSubtotal(invoice.lineItems), invoice.taxRateBps ?? 0);
   const total = subtotal + tax;
@@ -299,6 +318,8 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
           <p className="mt-1 whitespace-pre-line text-muted">{invoice.notes}</p>
         </div>
       ) : null}
+
+      <UncleInvoiceCredit show={showBrand} />
     </article>
   );
 }

@@ -45,6 +45,35 @@ export function UncleStamp({ className = "h-11 w-11" }: { className?: string }) 
   );
 }
 
+export function AccountMark({
+  name,
+  logoUrl,
+  className = "h-16 w-16",
+}: {
+  name: string;
+  logoUrl?: string | null;
+  className?: string;
+}) {
+  const letter = (name.trim()[0] ?? "?").toUpperCase();
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt=""
+        className={`${className} rounded-full bg-paper object-contain p-1 ring-1 ring-line`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`${className} display inline-flex items-center justify-center rounded-full bg-accent text-[1.65rem] leading-none text-accent-ink`}
+    >
+      {letter}
+    </span>
+  );
+}
+
 export function BrandMark({
   href = "/",
   size = "md",
