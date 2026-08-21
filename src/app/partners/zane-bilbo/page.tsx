@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageContainer } from "@/components/page-container";
 
 export const metadata: Metadata = {
   title: "Referral Partner Program — Bookkeeping Conroe",
@@ -14,9 +15,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BookkeepingConroeReferralPage() {
+export default function ZaneBilboPartnerPage() {
   return (
-    <div className="standalone-page-marker mx-auto flex min-h-full max-w-2xl flex-col gap-10 px-6 py-16 text-ink">
+    <PageContainer>
       <header>
         <p className="text-sm font-medium uppercase tracking-wide text-muted">
           Bookkeeping Conroe · Referral Partner Program
@@ -33,18 +34,18 @@ export default function BookkeepingConroeReferralPage() {
           day.
         </p>
         <p>
-          We&apos;ll take a look at your QuickBooks file and identify anything
-          that appears incorrect, incomplete, behind, or worth your attention.
+          We&apos;ll take a look at their QuickBooks file and identify anything
+          that appears incorrect, incomplete, behind, or worth their attention.
         </p>
         <p>There&apos;s no obligation to hire us.</p>
         <p>
-          Afterward, if you found the inspection helpful, we&apos;ll ask you to
-          leave an honest Google review about your experience.
+          Afterward, if they found the inspection helpful, we&apos;ll ask them
+          to leave an honest Google review about their experience.
         </p>
       </section>
 
       <section className="flex flex-col gap-4 rounded-xl border border-line bg-paper p-6">
-        <h2 className="text-xl">What Zane Can Say</h2>
+        <h2 className="text-2xl">What You Can Say</h2>
         <blockquote className="border-l-2 border-accent pl-4 italic leading-relaxed text-ink">
           &ldquo;I work with Bookkeeping Conroe, a local bookkeeping firm.
           We&apos;re offering business owners a free QuickBooks inspection
@@ -58,19 +59,19 @@ export default function BookkeepingConroeReferralPage() {
         </p>
         <blockquote className="border-l-2 border-accent pl-4 italic leading-relaxed text-ink">
           &ldquo;That&apos;s exactly what we can take a look at. I can do the
-          initial inspection with you, and Tom will guide me if we find
+          initial inspection with you, and Thomas will guide me if we find
           anything complicated. The inspection itself is free.&rdquo;
         </blockquote>
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-xl">Zane&apos;s Compensation</h2>
+        <h2 className="text-2xl">Your Compensation</h2>
         <p className="leading-relaxed">
           You will be paid <strong>$25 per hour</strong> for approved
           QuickBooks inspection work.
         </p>
         <p className="leading-relaxed">
-          Tom will train and guide you on how to conduct the inspection and
+          Thomas will train and guide you on how to conduct the inspection and
           what to look for.
         </p>
         <p className="leading-relaxed">
@@ -106,6 +107,6 @@ export default function BookkeepingConroeReferralPage() {
           partners@bookkeepingconroe.com
         </a>
       </footer>
-    </div>
+    </PageContainer>
   );
 }

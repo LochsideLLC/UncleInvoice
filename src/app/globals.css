@@ -30,6 +30,12 @@
   --color-olive: var(--olive);
   --font-sans: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), ui-serif, Georgia, serif;
+  --text-xs: 1.125rem;
+  --text-sm: 1.125rem;
+  --text-base: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-detail: 1rem;
 }
 
 @keyframes toast-banner-in {
@@ -71,6 +77,7 @@ body:has(.standalone-page-marker) footer {
 }
 
 body {
+  font-size: 1.125rem;
   background-color: var(--background);
   background-image:
     radial-gradient(ellipse 80% 50% at 10% -10%, rgba(154, 59, 36, 0.08), transparent 50%),
@@ -145,7 +152,7 @@ button {
   gap: 0.5rem;
   border-radius: 0.7rem;
   padding: 0.72rem 1.15rem;
-  font-size: 0.95rem;
+  font-size: 1.125rem;
   line-height: 1.2;
   font-weight: 600;
   transition:
@@ -204,7 +211,7 @@ button:disabled {
 }
 
 .field label {
-  font-size: 0.75rem;
+  font-size: 1rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -227,7 +234,7 @@ button:disabled {
 }
 
 .compact-fields .field label {
-  font-size: 0.68rem;
+  font-size: 0.875rem;
   letter-spacing: 0.06em;
 }
 
@@ -341,7 +348,7 @@ button:disabled {
   background: #f6e4c8;
   color: #6b3418;
   padding: 0.8rem 1rem;
-  font-size: 0.9rem;
+  font-size: 1.125rem;
 }
 
 @media print {
