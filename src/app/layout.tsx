@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fraunces.variable} ${sourceSans.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <div className="print:hidden pt-8">
+        <div id="site-chrome" className="print:hidden pt-8">
           <SiteHeader user={user} />
         </div>
         <main className="flex-1 pb-16">

@@ -62,6 +62,14 @@
   animation: toast-banner-out 280ms ease-in both;
 }
 
+/* Lets a standalone page (e.g. an unrelated-business landing page hosted
+   temporarily on this domain) suppress the Uncle Invoice header/footer by
+   rendering an element with .standalone-page-marker anywhere in its tree. */
+body:has(.standalone-page-marker) #site-chrome,
+body:has(.standalone-page-marker) footer {
+  display: none;
+}
+
 body {
   background-color: var(--background);
   background-image:
