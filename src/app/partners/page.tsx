@@ -10,21 +10,13 @@ export default function BookkeepingConroePartnersPage() {
   return (
     <PageContainer>
       <section className="flex flex-col items-center gap-6 text-center">
-        <header>
-          <p className="text-sm font-medium uppercase tracking-wide text-muted">
-            Bookkeeping Conroe · Referral Partner Program
-          </p>
-          <h1 className="mt-2 text-3xl leading-tight sm:text-4xl">
-            Earn income and experience referring bookkeeping clients
-          </h1>
-        </header>
-        <p className="leading-relaxed">
-          Get paid to refer. Build real bookkeeping experience doing it.
-        </p>
+        <h1 className="text-3xl leading-tight sm:text-4xl">
+          Earn income and experience referring bookkeeping clients
+        </h1>
         <img
           src="/images/partner-receiving-business-card.png"
           alt="Partner receiving a business card"
-          className="mx-auto w-full max-w-2xl rounded-2xl shadow-md"
+          className="mx-auto w-full max-w-4xl rounded-2xl shadow-md"
         />
         <a
           href="mailto:partners@bookkeepingconroe.com"
